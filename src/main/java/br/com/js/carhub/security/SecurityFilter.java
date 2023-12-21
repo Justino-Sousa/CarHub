@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import br.com.js.carhub.controller.AuthenticationController;
 import br.com.js.carhub.repository.UserRepository;
 import br.com.js.carhub.service.TokenService;
 import jakarta.servlet.FilterChain;
@@ -31,6 +32,7 @@ public class SecurityFilter extends OncePerRequestFilter{
 		var token = this.recoverToken(request);
 		if(token != null) {
 			var login = tokenService.validateToken(token);
+			if(login.equals("token-expired")) AuthenticationController.tokenExpired = true;
 			UserDetails user = userRepository.findByLogin(login);
 
 			var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());

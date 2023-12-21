@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import br.com.js.carhub.exception.UnauthorizedException;
+
 
 
 @Configuration
@@ -29,12 +31,19 @@ public class SecurityConfiguration {
 				.csrf( c -> c.disable())
 				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests( a -> a
-						.requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+						.requestMatchers("/api-docs/**", "/swagger-ui/**").permitAll()
+						.requestMatchers(HttpMethod.GET,"/api/users/**").permitAll()
+						.requestMatchers(HttpMethod.DELETE,"/api/users/**").permitAll()
+						.requestMatchers(HttpMethod.PUT,"/api/users/**").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/signin/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/auth/register").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+						.requestMatchers(HttpMethod.POST, "/api/users").permitAll()
 						.anyRequest().authenticated()
 					)
 				.addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+				.exceptionHandling(e -> e
+                        .authenticationEntryPoint(new UnauthorizedException())
+                )
 				.build();
 	}
 	

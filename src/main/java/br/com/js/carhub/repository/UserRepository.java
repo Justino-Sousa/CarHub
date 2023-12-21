@@ -10,4 +10,6 @@ import br.com.js.carhub.model.User;
 public interface UserRepository extends JpaRepository<User, Long> {
 
 	UserDetails findByLogin(String login);
+
+	User findByEmail(String email);
 }

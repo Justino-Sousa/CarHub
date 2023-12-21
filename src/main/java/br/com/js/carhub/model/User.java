@@ -1,9 +1,10 @@
 package br.com.js.carhub.model;
 
+import java.time.LocalDate;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,9 +38,16 @@ public class User implements UserDetails{
 	
 	private String firstName;
 	private String lastName;
+	
+	@Column(unique = true)
 	private String email;
-	private Date birthday;
+	
+	@DateTimeFormat(pattern = "dd/MM/yyyy")
+	private LocalDate birthday;
+	
+	@Column(unique = true)
 	private String login;
+	
 	private String password;
 	private String phone;
 	
@@ -47,13 +56,7 @@ public class User implements UserDetails{
 	private List<Car> cars;
 	
 	private UserRole role;
-
-	public User(String login, String password, UserRole role) {
-		this.login = login;
-		this.password = password;
-		this.role = role;
-	}
-
+	
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
 		 if(this.role == UserRole.ADMIN) return List.of(new SimpleGrantedAuthority("ROLE_ADMIN"), new SimpleGrantedAuthority("ROLE_USER"));

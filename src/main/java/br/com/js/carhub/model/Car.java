@@ -2,6 +2,7 @@ package br.com.js.carhub.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -21,11 +22,13 @@ public class Car {
 	
 	@Column(name = "car_year")
 	private int year;
+	
+	@Column(unique = true)
 	private String licensePlate;
 	private String model;
 	private String color;
 	
-	@ManyToOne
+	@ManyToOne(cascade = CascadeType.PERSIST)
 	@JoinColumn(name = "user_id")
 	@JsonBackReference
 	private User user;
