@@ -2,14 +2,15 @@
 
 Bem-vindo ao CarHub, uma aplicação que oferece uma API RESTful para gerenciar informações de usuários e carros.
 
-O projeto se encontra rodando em uma instancia da ec2 da aws: 
-
+A aplicação está atualmente em execução em uma instância da Amazon EC2 na AWS:
 Frontend: http://35.175.218.157/
 
 Backend: http://52.207.243.170:8080
 exemplo para consumir a rota de usuario: http://52.207.243.170:8080/api/users
 
 Documentação Swegger: http://52.207.243.170:8080/swagger-ui/index.html
+
+o projeto do frotend pode ser acessado aqui: https://github.com/Justino-Sousa/Carhub-Anguilar
 
 
 # Estórias de Usuário:
