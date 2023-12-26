@@ -25,5 +25,4 @@ public class UserDTO {
 	private String password;
 	private String phone;
 	private List<Car> cars;
-
 }

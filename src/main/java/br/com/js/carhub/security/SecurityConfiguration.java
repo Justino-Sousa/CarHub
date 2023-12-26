@@ -14,8 +14,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import br.com.js.carhub.exception.UnauthorizedException;
-
 
 
 @Configuration
@@ -41,9 +39,6 @@ public class SecurityConfiguration {
 						.anyRequest().authenticated()
 					)
 				.addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
-				.exceptionHandling(e -> e
-                        .authenticationEntryPoint(new UnauthorizedException())
-                )
 				.build();
 	}
 	

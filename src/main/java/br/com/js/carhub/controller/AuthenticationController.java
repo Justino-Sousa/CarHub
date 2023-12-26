@@ -8,12 +8,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import br.com.js.carhub.exception.UnauthorizedErrorException;
 import br.com.js.carhub.model.LoggedData;
 import br.com.js.carhub.model.LoginInformation;
 import br.com.js.carhub.model.User;
@@ -26,6 +28,7 @@ import br.com.js.carhub.service.TokenService;
 
 @RestController
 @RequestMapping("/api")
+@CrossOrigin(origins = "*")
 public class AuthenticationController {
 
     @Autowired
@@ -46,24 +49,18 @@ public class AuthenticationController {
     public static boolean tokenExpired = false;
 
     @PostMapping("/signin")
-    public ResponseEntity<Object> login(@RequestBody AuthenticationDTO data) {
-        try {
-            var usernamePassword = new UsernamePasswordAuthenticationToken(data.getLogin(), data.getPassword());
-            var auth = this.authenticationManager.authenticate(usernamePassword);
-            var token = tokenService.generateToken((User) auth.getPrincipal());
-
-            User user = (User) userRepository.findByLogin(data.getLogin());
-            informationService.updateInformation(new LoginInformation(null, LocalDateTime.now(), LocalDateTime.now(), user.getId()));
-
-            return ResponseEntity.ok(new TokenResponseDTO(token));
-        } catch (Exception e) {
-            if (tokenExpired) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(getErrorResponse("Unauthorized - invalid session", HttpStatus.UNAUTHORIZED.value()));
-            }
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(getErrorResponse("Unauthorized", HttpStatus.UNAUTHORIZED.value()));
-        }
+    public ResponseEntity<TokenResponseDTO> login(@RequestBody AuthenticationDTO data) throws Exception {
+    	try{
+    		 var usernamePassword = new UsernamePasswordAuthenticationToken(data.getLogin(), data.getPassword());
+             var auth = this.authenticationManager.authenticate(usernamePassword);
+             var token = tokenService.generateToken((User) auth.getPrincipal());
+             User user = (User) userRepository.findByLogin(data.getLogin());
+             informationService.updateInformation(new LoginInformation(null, LocalDateTime.now(), LocalDateTime.now(), user.getId()));
+             return ResponseEntity.ok(new TokenResponseDTO(token));
+    	}catch (Exception e) {
+    		throw new UnauthorizedErrorException();
+		}
+           
     }
 
     @GetMapping("/me")

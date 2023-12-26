@@ -1,6 +1,7 @@
 package br.com.js.carhub.service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -8,14 +9,17 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import br.com.js.carhub.exception.CarNotFoundException;
+import br.com.js.carhub.exception.InvalidFieldsException;
+import br.com.js.carhub.exception.LicensePlateException;
 import br.com.js.carhub.exception.MissingFieldsException;
+import br.com.js.carhub.exception.UserNotFoundException;
 import br.com.js.carhub.model.Car;
 import br.com.js.carhub.model.LoggedData;
 import br.com.js.carhub.model.User;
 import br.com.js.carhub.model.dto.CarDTO;
 import br.com.js.carhub.repository.CarRepository;
 import br.com.js.carhub.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 
 @Service
 public class CarService {
@@ -29,28 +33,54 @@ public class CarService {
 	@Autowired
 	private UserRepository userRepository;
 
-	public List<CarDTO> findAll() throws EntityNotFoundException, Exception {
-		User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
+	public List<CarDTO> findAll() throws UserNotFoundException {
+		User loggedUser = null;
+
+		try {
+			loggedUser = userRepository.findById(loggedData.getLogguedUserId()).get();
+		} catch (Exception e) {
+			throw new UserNotFoundException();
+		}
 
 		List<Car> cars = repository.findByUser(loggedUser);
 		return cars.stream().map(this::mapToCarDTO).collect(Collectors.toList());
 	}
 
-	public Optional<CarDTO> findById(Long carId) throws EntityNotFoundException, Exception {
-		User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
+	public CarDTO findById(Long carId) throws CarNotFoundException {
 
-		return repository.findById(carId).filter(c -> c.getUser().getId() == loggedUser.getId()).map(this::mapToCarDTO);
+		CarDTO dto = null;
+		try {
+			User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
+					.orElseThrow(() -> new CarNotFoundException());
+			dto = repository.findById(carId).filter(c -> c.getUser().getId() == loggedUser.getId())
+					.map(this::mapToCarDTO).get();
+		} catch (Exception e) {
+			throw new CarNotFoundException();
+		}
+		return dto;
 	}
 
-	public CarDTO save(CarDTO carDTO) throws EntityNotFoundException, Exception {
+	public CarDTO save(CarDTO carDTO)
+			throws InvalidFieldsException, LicensePlateException, MissingFieldsException, UserNotFoundException {
+		if (carDTO == null) {
+			throw new InvalidFieldsException();
+		}
 
+		Car carInList = mapToCarEntity(carDTO);
+		if (isThereCarWithPlate(Collections.singletonList(carInList))) {
+			throw new LicensePlateException();
+		}
+
+		User loggedUser = null;
+		try {
+			loggedUser = userRepository.findById(loggedData.getLogguedUserId()).get();
+			carDTO.setUser(loggedUser);
+		} catch (Exception e) {
+			throw new UserNotFoundException();
+		}
+		
 		if (!isValidUserData(carDTO))
 			throw new MissingFieldsException();
-
-		User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
 
 		Car car = mapToCarEntity(carDTO);
 		car.setUser(loggedUser);
@@ -58,38 +88,61 @@ public class CarService {
 		return mapToCarDTO(savedCar);
 	}
 
-	public Optional<CarDTO> update(Long carId, CarDTO updatedCarDTO) throws EntityNotFoundException, Exception {
-		
-		if (!isValidUserData(updatedCarDTO))
-			throw new MissingFieldsException();
-		
-		User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
-		
-		Car car = mapToCarEntity(updatedCarDTO);
-		car.setUser(loggedUser);
-		if(car.getUser().getId() == loggedUser.getId()) {
-			car.setColor(updatedCarDTO.getColor());
-			car.setLicensePlate(updatedCarDTO.getLicensePlate());
-			car.setModel(updatedCarDTO.getModel());
-			car.setUser(loggedUser);
-			car.setYear(updatedCarDTO.getYear());
+	public CarDTO update(Long carId, CarDTO updatedCarDTO) throws InvalidFieldsException, MissingFieldsException, UserNotFoundException, CarNotFoundException {
+
+		if (updatedCarDTO == null) {
+			throw new InvalidFieldsException();
 		}
 		
+		Car car = null;
+		try {
+			car = repository.findById(carId).get();
+		} catch (Exception e) {
+			throw new CarNotFoundException();
+		}
+
+		
+		User loggedUser = null;
+		try {
+			loggedUser = userRepository.findById(loggedData.getLogguedUserId()).get();
+			updatedCarDTO.setUser(loggedUser);
+		} catch (Exception e) {
+			throw new UserNotFoundException();
+		}
+
+		if (!isValidUserData(updatedCarDTO))
+			throw new MissingFieldsException();
+
+		car.setColor(updatedCarDTO.getColor());
+		car.setLicensePlate(updatedCarDTO.getLicensePlate());
+		car.setModel(updatedCarDTO.getModel());
+		car.setYear(updatedCarDTO.getYear());
+
 		Car savedCar = repository.save(car);
-		return Optional.ofNullable(mapToCarDTO(savedCar));
+		return (mapToCarDTO(savedCar));
 	}
 
 	public Car findByLicensePlate(String licensePlate) {
 		return repository.findBylicensePlate(licensePlate);
 	}
 
-	public void deleteCar(Long carId) throws EntityNotFoundException, Exception {
-		User loggedUser = userRepository.findById(loggedData.getLogguedUserId())
-				.orElseThrow(() -> new EntityNotFoundException("User not found"));
+	public void deleteCar(Long carId) throws CarNotFoundException, UserNotFoundException {
 
-		repository.findById(carId).filter(c -> c.getUser().getId() == loggedUser.getId())
-				.ifPresent(c -> repository.deleteById(carId));
+		try {
+			User loggedUser = userRepository.findById(loggedData.getLogguedUserId()).get();
+			Optional<Car> car = repository.findById(carId).filter(c -> c.getUser().getId() == loggedUser.getId());
+			if(car.isPresent()) {
+				repository.delete(car.get());
+			}else {
+				throw new CarNotFoundException();
+			}
+			
+		} catch (CarNotFoundException e) {
+			throw new CarNotFoundException();
+		}catch (Exception e) {
+			throw new UserNotFoundException();
+		}
+
 	}
 
 	public CarDTO mapToCarDTO(Car car) {

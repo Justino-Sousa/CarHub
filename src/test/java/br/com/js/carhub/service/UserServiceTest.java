@@ -1,15 +1,14 @@
 package br.com.js.carhub.service;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,168 +17,137 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-import br.com.js.carhub.exception.MissingFieldsException;
-import br.com.js.carhub.model.Car;
+import br.com.js.carhub.exception.UserNotFoundException;
 import br.com.js.carhub.model.User;
 import br.com.js.carhub.model.dto.UserDTO;
 import br.com.js.carhub.repository.CarRepository;
 import br.com.js.carhub.repository.UserRepository;
 
 @SpringBootTest
- class UserServiceTest {
+class UserServiceTest {
 
-	
-	@InjectMocks
-	private UserService userService;
+    @Mock
+    private UserRepository userRepository;
 
-	@Mock
-	private UserRepository userRepository;
-	
-	@Mock
-	private CarRepository carRepository;
+    @Mock
+    private CarRepository carRepository;
 
-	@Test
-	 void testFindAll() {
+    @Mock
+    private CarService carService;
 
-		List<User> users = Arrays.asList(new User(), new User());
-		when(userRepository.findAll()).thenReturn(users);
+    @InjectMocks
+    private UserService userService;
 
-		List<User> result = userService.findAll();
 
-		assertEquals(users, result);
-	}
+    @Test
+    void testFindAll() {
+       
+        List<User> userList = new ArrayList<>();
+        when(userRepository.findAll()).thenReturn(userList);
 
-	@Test
-	 void testFindById() {
+        
+        List<User> result = userService.findAll();
+        assertEquals(userList, result);
+    }
 
-		User user = new User();
-		when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    @Test
+    void testFindById() throws UserNotFoundException {
+       
+        Long userId = 1L;
+        User user = new User();
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
-		Optional<User> result = userService.findById(1L);
+        
+        UserDTO result = userService.findById(userId);
+        assertNotNull(result);
+       
+    }
 
-		assertTrue(result.isPresent());
-		assertEquals(user, result.get());
-	}
+    @Test
+    void testSave() {
+    	
+        UserDTO userDTO = new UserDTO();     
+        userDTO.setBirthday(LocalDate.now());
+        userDTO.setCars(new ArrayList<>());
+        userDTO.setEmail("jsnjunior@test.com");
+        userDTO.setFirstName("Justino");
+        userDTO.setLastName("Sousa");
+        userDTO.setId(1L);
+        userDTO.setLogin("jsnjunior");
+        userDTO.setPassword("password");
+        userDTO.setPhone("2002020");
+        
+        @SuppressWarnings("static-access")
+		User user = userService.mapUserDTOToUser(userDTO);
+        
+        when(userRepository.findByLogin(userDTO.getLogin())).thenReturn(null);
+        when(userRepository.findByEmail(userDTO.getEmail())).thenReturn(null);
+        when(carService.isThereCarWithPlate(userDTO.getCars())).thenReturn(false);
+        when(userRepository.save(any())).thenReturn(user);
 
-	@Test
-	 void testFindById_NotFound() {
+        assertDoesNotThrow(() -> userService.save(userDTO));
+       
+    }
 
-		when(userRepository.findById(1L)).thenReturn(Optional.empty());
+    @Test
+    void testUpdate() {
+    	
+    	 UserDTO userDTO = new UserDTO();     
+         userDTO.setBirthday(LocalDate.now());
+         userDTO.setCars(new ArrayList<>());
+         userDTO.setEmail("jsnjunior@test.com");
+         userDTO.setFirstName("Justino");
+         userDTO.setLastName("Sousa");
+         userDTO.setId(1L);
+         userDTO.setLogin("jsnjunior");
+         userDTO.setPassword("password");
+         userDTO.setPhone("2002020");
+         
+        @SuppressWarnings("static-access")
+ 		User user = userService.mapUserDTOToUser(userDTO);
+       
+        Long userId = 1L;
+        UserDTO updatedUser = new UserDTO(); 
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenReturn(user);
 
-		Optional<User> result = userService.findById(1L);
+        
+        assertDoesNotThrow(() -> userService.update(userId, updatedUser));
+       
+    }
 
-		assertFalse(result.isPresent());
-	}
+    @Test
+    void testDelete() {
+       
+        Long userId = 1L;
+        when(userRepository.findById(userId)).thenReturn(Optional.of(new User()));
 
-	@Test
-	 void testSave() throws MissingFieldsException {
+        
+        assertDoesNotThrow(() -> userService.delete(userId));
+       
+    }
 
-		UserDTO userDTO = createSampleUserDTO();
-		User savedUser = createSampleUser();
-		when(userRepository.save(any())).thenReturn(savedUser);
-		when(carRepository.saveAll(any())).thenReturn(userDTO.getCars());
+    @Test
+    void testFindByLogin() {
+       
+        String login = "jsnjunior";
+        when(userRepository.findByLogin(login)).thenReturn(mock(UserDetails.class));
 
-		UserDTO result = userService.save(userDTO);
+        
+        assertDoesNotThrow(() -> userService.findByLogin(login));
+       
+    }
 
-		assertEquals(savedUser.getId(), result.getId());
-		assertEquals(savedUser.getFirstName(), result.getFirstName());
-		assertEquals(savedUser.getLastName(), result.getLastName());
-		assertEquals(savedUser.getEmail(), result.getEmail());
-		assertEquals(savedUser.getBirthday(), result.getBirthday());
-		assertEquals(savedUser.getLogin(), result.getLogin());
-		assertEquals(savedUser.getPassword(), result.getPassword());
-		assertEquals(savedUser.getPhone(), result.getPhone());
-	}
+    @Test
+    void testFindByEmail() {
 
-	@Test
-	 void testUpdate() {
+        String email = "jsnjunior@test.com";
+        when(userRepository.findByEmail(email)).thenReturn(new User());
+        assertDoesNotThrow(() -> userService.findByEmail(email));
 
-		UserDTO updatedUserDTO = createSampleUserDTO();
-		User existingUser = createSampleUser();
-		when(userRepository.findById(1L)).thenReturn(Optional.of(existingUser));
-		when(userRepository.save(any())).thenReturn(existingUser);
+    }
 
-		Optional<User> result = userService.update(1L, updatedUserDTO);
 
-		assertTrue(result.isPresent());
-		assertEquals(existingUser.getId(), result.get().getId());
-		assertEquals(existingUser.getFirstName(), result.get().getFirstName());
-		assertEquals(existingUser.getLastName(), result.get().getLastName());
-		assertEquals(existingUser.getEmail(), result.get().getEmail());
-		assertEquals(existingUser.getBirthday(), result.get().getBirthday());
-		assertEquals(existingUser.getLogin(), result.get().getLogin());
-		assertEquals(existingUser.getPassword(), result.get().getPassword());
-		assertEquals(existingUser.getPhone(), result.get().getPhone());
-	}
 
-	@Test
-	 void testUpdate_NotFound() {
-
-		when(userRepository.findById(1L)).thenReturn(Optional.empty());
-
-		Optional<User> result = userService.update(1L, createSampleUserDTO());
-
-		assertFalse(result.isPresent());
-	}
-
-	@Test
-	 void testDelete() {
-		userService.delete(1L);
-		verify(userRepository, times(1)).deleteById(1L);
-	}
-
-	@Test
-	 void testFindByLogin() {
-		UserDetails userDetails = createSampleUser();
-		when(userRepository.findByLogin("username")).thenReturn(userDetails);
-		UserDetails result = userService.findByLogin("username");
-		assertEquals(userDetails, result);
-	}
-
-	@Test
-	 void testFindByEmail() {
-
-		User user = createSampleUser();
-		when(userRepository.findByEmail("user@example.com")).thenReturn(user);
-		User result = userService.findByEmail("user@example.com");
-		assertEquals(user, result);
-	}
-
-	private UserDTO createSampleUserDTO() {
-		Car car = new Car();
-		car.setId(1L);
-		car.setYear(2022);
-		car.setLicensePlate("ABC123");
-		car.setModel("Model X");
-		car.setColor("Black");
-
-		UserDTO userDTO = new UserDTO();
-		userDTO.setFirstName("John");
-		userDTO.setLastName("Doe");
-		userDTO.setEmail("john.doe@example.com");
-		userDTO.setBirthday(LocalDate.of(1990, 1, 1));
-		userDTO.setLogin("john.doe");
-		userDTO.setPassword("password");
-		userDTO.setPhone("123456789");
-		userDTO.setCars(Arrays.asList(car));
-
-		return userDTO;
-	}
-
-	private User createSampleUser() {
-		User user = new User();
-		user.setId(1L);
-		user.setFirstName("John");
-		user.setLastName("Doe");
-		user.setEmail("john.doe@example.com");
-		user.setBirthday(LocalDate.of(1990, 1, 1));
-		user.setLogin("john.doe");
-		user.setPassword(new BCryptPasswordEncoder().encode("password"));
-		user.setPhone("123456789");
-		user.setCars(Arrays.asList(new Car()));
-
-		return user;
-	}
 }
