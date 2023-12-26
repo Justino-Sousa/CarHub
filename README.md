@@ -57,8 +57,8 @@ Antes de começar, certifique-se de ter o Maven instalado em sua máquina.
 
 1. Clonar o Repositório
 
-git clone https://seu-repositorio.git
-cd nome-do-projeto
+git clone https://github.com/Justino-Sousa/CarHub.git
+cd CarHub
 
 2. Buildar o Projeto com Maven
 
