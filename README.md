@@ -6,7 +6,8 @@ O projeto se encontra rodando em uma instancia da ec2 da aws:
 
 Frontend: http://35.175.218.157/
 
-Backend: http://52.207.243.170:8080/
+Backend: http://52.207.243.170:8080
+exemplo para consumir a rota de usuario: http://52.207.243.170:8080/api/users
 
 Documentação Swegger: http://52.207.243.170:8080/swagger-ui/index.html
 
